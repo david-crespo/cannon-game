@@ -6,20 +6,13 @@ type CannonNum = Int
 main : Signal Element
 main = lift display K.lastPressed
 
--- keycodes for [a, s, d, f, j ,k, l, ;]
+-- map homerow keys to [0..7]
 homerow : Dict K.KeyCode CannonNum
-homerow = fromList [
-    (65, 0),
-    (83, 1),
-    (68, 2),
-    (70, 3),
-    (74, 4),
-    (75, 5),
-    (76, 6),
-    (186, 7)]
+homerow = fromList (zip [65, 83, 68, 70, 74, 75, 76, 186] [0..7])
 
---keymap : Dict Int Int
---keymap : fromList [ (65, 1) ]
+getCannonNum : K.KeyCode -> Maybe CannonNum
+getCannonNum keyCode = get keyCode homerow
+
 
 input = let delta = lift (\t -> t/20) (fps 25)
         in  sampleOn delta (lift2 (,) delta K.arrows)
@@ -28,7 +21,7 @@ display : Int -> Element
 display keyCode =
     flow right
         [ plainText "The last key you pressed was: "
-        , asText (get keyCode homerow)
+        , asText (getCannonNum keyCode)
         ]
 
 

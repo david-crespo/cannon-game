@@ -1,5 +1,6 @@
 import Dict (Dict, get, fromList)
 import Keyboard (KeyCode, space, isDown)
+import Random (range)
 
 type CannonNum = Float
 type RowNum = Float
@@ -7,7 +8,8 @@ type KeyDown = Bool
 type CreatePlatform = Bool
 data Dir = Left | Right
 
-type BulletColState = [Float]
+type BulletState = { pos: Float }
+type BulletColState = [BulletState]
 type BulletsState = [BulletColState]
 
 type PlatformState = { dir:Dir, pos:Float, len:Float }
@@ -24,17 +26,23 @@ cannonSpacing = 70
 numPlatformRows = 3
 platformSpacing = 100
 
-newPlatform = { dir=Left, pos=-halfGameW, len=100 }
+newPlatform = { dir=Left, pos=-halfGameW-50, len=100 }
 
 
 -- MAIN
 
 homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 
+randToBool = (>) 3
+
+platformSignal = lift randToBool <| range 1 10 <| every ( 300 * millisecond)
+
 input : Signal ([KeyDown], [KeyDown])
-input = let spaceList = combine (repeat numPlatformRows space)
+input = let spaceList = combine (repeat numPlatformRows platformSignal)
             keysList = combine (map isDown homerow) in
         sampleOn (fps 30) (lift2 (,) spaceList keysList)
+
+--main = lift asText rand
 
 main = let initBulletsState = repeat numCannons []
            initPlatformsState = repeat numPlatformRows [newPlatform]
@@ -58,7 +66,7 @@ maybeAddBullets : [KeyDown] -> GameState -> GameState
 maybeAddBullets keys gs = { gs | bbs <- map maybeAddBullet (zip keys gs.bbs) }
 
 maybeAddBullet : (KeyDown, BulletColState) -> BulletColState
-maybeAddBullet (p,bs) = if p then cannonH::bs else bs
+maybeAddBullet (p,bs) = if p then {pos=cannonH}::bs else bs
 
 bulletsMove2 : GameState -> GameState
 bulletsMove2 gs = { gs | bbs <- map bulletsMove gs.bbs }
@@ -66,8 +74,8 @@ bulletsMove2 gs = { gs | bbs <- map bulletsMove gs.bbs }
 bulletsMove : BulletColState -> BulletColState
 bulletsMove xs = case xs of
                   [] -> []
-                  (b::bs) -> if b < gameH
-                             then (b + bulletSpeed) :: bulletsMove bs
+                  (b::bs) -> if b.pos < gameH
+                             then { b | pos <- b.pos + bulletSpeed } :: bulletsMove bs
                              else bulletsMove bs
 
 -- PLATFORMS
@@ -124,8 +132,8 @@ display { ps, bbs } = collage gameW gameH (
 bullets : (CannonNum, BulletColState) -> [Form]
 bullets (n, bs) = map (bullet n) bs
 
-bullet : CannonNum -> Float -> Form
-bullet n pos = move (cannonXOffset n, halfGameH - pos)
+bullet : CannonNum -> BulletState -> Form
+bullet n {pos} = move (cannonXOffset n, halfGameH - pos)
                     (rect bulletW bulletH |> filled bulletColor)
 
 -- CANNON

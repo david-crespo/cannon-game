@@ -29,7 +29,7 @@ newPlatform = { dir=Left, pos=-halfGameW, len=100 }
 
 -- INPUT
 
-homerow = [65, 83, 68, 70, 74, 75, 76, 186] -- asdf jkl;
+homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 
 input : Signal ([KeyDown], [KeyDown])
 input = let spaceList = combine (repeat numPlatformRows space)
@@ -108,6 +108,9 @@ platformH = 20
 
 greyBackground = rect gameW gameH |> filled myGrey
 
+instructions = move (0, -halfGameH + 10)
+                    (toForm (plainText "Use SDFG HJKL to fire the cannons"))
+
 cannonXOffset : CannonNum -> Float
 cannonXOffset n = n * cannonSpacing - halfGameW
 
@@ -118,8 +121,9 @@ platformYOffset n = n * platformSpacing - halfGameH
 -- DISPLAY
 
 displayBullets : GameState -> Element
-displayBullets { ps, bbs } = collage gameW gameH (
+displayBullets { ps, bbs } = collage gameW (gameH) (
                            greyBackground
+                           :: instructions
                            :: (map cannon [1..numCannons])
                            ++ (concatMap bullets (zip [1..numCannons] bbs))
                            ++ (concatMap platforms (zip [1..numPlatformRows] ps)))

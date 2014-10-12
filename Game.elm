@@ -1,9 +1,12 @@
 import Dict (Dict, get, fromList)
 import Keyboard (KeyCode, space, isDown)
 
-type CannonNum = Int
+type CannonNum = Float
 type BulletPos = Float
 type KeyDown = Bool
+
+numCannons = 8
+cannonSpacing = 70
 
 -- asdf jkl;
 homerowCodes = [65, 83, 68, 70, 74, 75, 76, 186]
@@ -11,17 +14,16 @@ homerowCodes = [65, 83, 68, 70, 74, 75, 76, 186]
 input : Signal [KeyDown]
 input = sampleOn (fps 30) (combine (map isDown homerowCodes))
 
-bulletState = repeat 8 []
+emptyBulletState = repeat numCannons []
 
 --main = lift asText (foldp step bulletState input)
-
-main = lift displayBullets (foldp step bulletState input)
+main = lift displayBullets (foldp step emptyBulletState input)
 
 displayBullets : [[BulletPos]] -> Element
 displayBullets bbs = collage gameW gameH (
                          greyBackground
-                         :: (map cannon [1..8])
-                         ++ (concatMap bullets (zip [1..8] bbs)))
+                         :: (map cannon [1..numCannons])
+                         ++ (concatMap bullets (zip [1..numCannons] bbs)))
 
 bullets : (CannonNum, [BulletPos]) -> [Form]
 bullets (n, bs) = map (bullet n) bs
@@ -53,22 +55,19 @@ bulletsMove xs = case xs of
 
 -- Display
 
-c = 240
-backgroundColor = rgba c c c 1
+myGrey = rgba 240 240 240 1
 cannonColor = blue
 bulletColor = black
-cannonSpacing = 70
-(gameW,gameH) = (630,400)
-(halfGameW,halfGameH) = (315,200)
+(gameW,gameH) = ((numCannons + 1) * cannonSpacing, 400)
+(halfGameW,halfGameH) = (gameW/2,200)
 (bulletW, bulletH) = (2, 6)
-(cannonW, cannonH) = (6, 20)
-(halfCannonW, halfCannonH) = (3, 10)
+(cannonW, cannonH) = (6, 14)
+(halfCannonW, halfCannonH) = (3, 7)
 
-greyBackground = rect gameW gameH |> filled backgroundColor
-background c = rect gameW gameH |> filled c
+greyBackground = rect gameW gameH |> filled myGrey
 
 cannonXOffset : CannonNum -> Float
-cannonXOffset n = toFloat (n * cannonSpacing - halfGameW)
+cannonXOffset n = n * cannonSpacing - halfGameW
 
 cannon : CannonNum -> Form
 cannon n = move (cannonXOffset n, halfGameH - halfCannonH)

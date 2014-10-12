@@ -4,6 +4,7 @@ import Keyboard (KeyCode, space, isDown)
 type CannonNum = Float
 type RowNum = Float
 type KeyDown = Bool
+type CreatePlatform = Bool
 data Dir = Left | Right
 
 type BulletColState = [Float]
@@ -23,33 +24,41 @@ cannonSpacing = 70
 numPlatformRows = 3
 platformSpacing = 100
 
+newPlatform = { dir=Left, pos=-halfGameW, len=100 }
+
 
 -- INPUT
 
 homerow = [65, 83, 68, 70, 74, 75, 76, 186] -- asdf jkl;
 
-input : Signal [KeyDown]
-input = sampleOn (fps 30) (combine (map isDown homerow))
+input : Signal ([KeyDown], [KeyDown])
+input = let spaceList = combine (repeat numPlatformRows space)
+            keysList = combine (map isDown homerow) in
+        sampleOn (fps 30) (lift2 (,) spaceList keysList)
 
 --main = lift asText (foldp step bulletState input)
 main = let initBulletsState = repeat numCannons []
-           initPlatformsState = repeat numPlatformRows [{ dir=Left, pos=0, len=100 }]
+           initPlatformsState = repeat numPlatformRows [newPlatform]
            initState = { ps = initPlatformsState, bbs = initBulletsState }
        in lift displayBullets (foldp step initState input)
 
 -- STEP
 
-step : [KeyDown] -> GameState -> GameState
-step keys = bulletsMove2 >> maybeAddBullet2 keys >> platformsMove2
+step : ([CreatePlatform], [KeyDown]) -> GameState -> GameState
+step (createPs, keys) = bulletsMove2
+                        >> maybeAddBullets keys
+                        >> platformsMove2
+                        >> maybeAddPlatforms createPs
+
+-- BULLETS
 
 bulletSpeed = 5
-platformSpeed = 5
 
-maybeAddBullet2 : [KeyDown] -> GameState -> GameState
-maybeAddBullet2 keys gs = { gs | bbs <- map maybeAddBullet (zip keys gs.bbs)}
+maybeAddBullets : [KeyDown] -> GameState -> GameState
+maybeAddBullets keys gs = { gs | bbs <- map maybeAddBullet (zip keys gs.bbs) }
 
 maybeAddBullet : (KeyDown, BulletColState) -> BulletColState
-maybeAddBullet (p,bs) = if p then (cannonH :: bs) else bs
+maybeAddBullet (p,bs) = if p then cannonH::bs else bs
 
 bulletsMove2 : GameState -> GameState
 bulletsMove2 gs = { gs | bbs <- map bulletsMove gs.bbs }
@@ -60,6 +69,16 @@ bulletsMove xs = case xs of
                   (b::bs) -> if b < gameH
                              then (b + bulletSpeed) :: bulletsMove bs
                              else bulletsMove bs
+
+-- PLATFORMS
+
+platformSpeed = 5
+
+maybeAddPlatforms : [CreatePlatform] -> GameState -> GameState
+maybeAddPlatforms createPs gs = { gs | ps <- map maybeAddPlatform (zip createPs gs.ps) }
+
+maybeAddPlatform : (CreatePlatform, PlatformRowState) -> PlatformRowState
+maybeAddPlatform (createP, ps) = if createP then newPlatform::ps else ps
 
 platformsMove2 : GameState -> GameState
 platformsMove2 gs = { gs | ps <- map platformsMove gs.ps }

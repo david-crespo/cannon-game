@@ -1,13 +1,14 @@
 import Dict (Dict, get, fromList)
-import Keyboard (KeyCode, keysDown, arrows, space)
+import Keyboard (KeyCode, space)
 
 type CannonNum = Int
 
-delta = inSeconds <~ fps 30
---input = sampleOn delta <| lift2 (,) (floatify <~ arrows) delta
+-- MARIO
+input = let delta = lift (\t -> t/20) (fps 30)
+        in sampleOn delta (lift2 (,) space delta)
 
 --main : Signal Element
---main = sampleOn delta <| lift display keysDown
+--main = lift asText input
 
 --main : Signal Element
 --main = coloredBackground <~ colorSignal
@@ -33,9 +34,7 @@ display keyCodes =
         ]
 
 main : Signal Element
-main = lift displayBullets (foldp bulletsStep [0, 100, 200] bulletDelta)
-
---main = displayBullets [100,200,300]
+main = lift displayBullets (foldp bulletsStep [0, 100, 200] input)
 
 displayBullets : [BulletPos] -> Element
 displayBullets bPositions = collage gameW gameH (
@@ -43,13 +42,13 @@ displayBullets bPositions = collage gameW gameH (
                                 --++ (map cannon [1..8])
                                 ++ (map bullet bPositions))
 
+maybeAddBullet : Bool -> [BulletPos] -> [BulletPos]
+maybeAddBullet p bs = if p then addBullet bs else bs
+
 bullet : BulletPos -> Form
 bullet pos = move (0, halfGameH - pos) (rect bulletW bulletH |> filled bulletColor)
 
 type BulletPos = Float
-
-bulletDelta : Signal Time
-bulletDelta = fps 30
 
 bulletsState : [BulletPos]
 bulletsState = []
@@ -59,12 +58,13 @@ addBullet = (::) 0
 
 bulletSpeed = 5
 
-bulletsStep : Time -> [BulletPos] -> [BulletPos]
-bulletsStep t xs = case xs of
-                     [] -> []
-                     (b::bs) -> if b < gameH
-                                then (b + bulletSpeed) :: bulletsStep t bs
-                                else bulletsStep t bs
+bulletsStep : (Bool, Time) -> [BulletPos] -> [BulletPos]
+bulletsStep (p, t) xs = case xs of
+                      [] -> if p then [0] else []
+                      (b::bs) -> let newBs = maybeAddBullet p bs in
+                                if b < gameH
+                                then (b + bulletSpeed) :: bulletsStep (False, t) newBs
+                                else bulletsStep (False, t) newBs
 
 -- Display
 

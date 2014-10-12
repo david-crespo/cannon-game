@@ -8,30 +8,19 @@ type KeyDown = Bool
 numCannons = 8
 cannonSpacing = 70
 
--- asdf jkl;
-homerowCodes = [65, 83, 68, 70, 74, 75, 76, 186]
+
+-- INPUT
+
+homerow = [65, 83, 68, 70, 74, 75, 76, 186] -- asdf jkl;
 
 input : Signal [KeyDown]
-input = sampleOn (fps 30) (combine (map isDown homerowCodes))
-
-emptyBulletState = repeat numCannons []
+input = sampleOn (fps 30) (combine (map isDown homerow))
 
 --main = lift asText (foldp step bulletState input)
-main = lift displayBullets (foldp step emptyBulletState input)
+main = let emptyBulletState = repeat numCannons []
+       in lift displayBullets (foldp step emptyBulletState input)
 
-displayBullets : [[BulletPos]] -> Element
-displayBullets bbs = collage gameW gameH (
-                         greyBackground
-                         :: (map cannon [1..numCannons])
-                         ++ (concatMap bullets (zip [1..numCannons] bbs)))
-
-bullets : (CannonNum, [BulletPos]) -> [Form]
-bullets (n, bs) = map (bullet n) bs
-
-bullet : CannonNum -> BulletPos -> Form
-bullet n pos = move (cannonXOffset n, halfGameH - pos)
-                    (rect bulletW bulletH |> filled bulletColor)
-
+-- STEP
 
 step keys = bulletsMove2 >> maybeAddBullet2 keys
 
@@ -53,7 +42,8 @@ bulletsMove xs = case xs of
                              then (b + bulletSpeed) :: bulletsMove bs
                              else bulletsMove bs
 
--- Display
+
+-- DISPLAY CONFIG
 
 myGrey = rgba 240 240 240 1
 cannonColor = blue
@@ -68,6 +58,22 @@ greyBackground = rect gameW gameH |> filled myGrey
 
 cannonXOffset : CannonNum -> Float
 cannonXOffset n = n * cannonSpacing - halfGameW
+
+
+-- DISPLAY
+
+displayBullets : [[BulletPos]] -> Element
+displayBullets bbs = collage gameW gameH (
+                         greyBackground
+                         :: (map cannon [1..numCannons])
+                         ++ (concatMap bullets (zip [1..numCannons] bbs)))
+
+bullets : (CannonNum, [BulletPos]) -> [Form]
+bullets (n, bs) = map (bullet n) bs
+
+bullet : CannonNum -> BulletPos -> Form
+bullet n pos = move (cannonXOffset n, halfGameH - pos)
+                    (rect bulletW bulletH |> filled bulletColor)
 
 cannon : CannonNum -> Form
 cannon n = move (cannonXOffset n, halfGameH - halfCannonH)

@@ -1,46 +1,59 @@
 import Dict (Dict, get, fromList)
-import Keyboard (KeyCode, space)
+import Keyboard (KeyCode, space, isDown)
 
 type CannonNum = Int
 
 -- MARIO
-input = sampleOn (fps 30) space
+input = sampleOn (fps 30) (combine (map isDown homerowCodes))
 
--- map homerow keys to [0..7]
+homerowCodes = [65, 83, 68, 70, 74, 75, 76, 186]
+
 homerow : Dict KeyCode CannonNum
-homerow = fromList (zip [65, 83, 68, 70, 74, 75, 76, 186] [1..8])
+homerow = fromList (zip homerowCodes [1..8])
 
 getCannonNum : KeyCode -> Maybe CannonNum
 getCannonNum keyCode = get keyCode homerow
 
-display : [Int] -> Element
+display : [Bool] -> Element
 display keyCodes =
     flow right
         [ plainText "The last key you pressed was: "
-        , asText (map getCannonNum keyCodes)
+        , asText keyCodes
         ]
 
+--main = lift display input
+
 main : Signal Element
-main = lift displayBullets (foldp step [0, 100, 200] input)
+main = lift displayBullets (foldp step [[]] input)
 
-displayBullets : [BulletPos] -> Element
-displayBullets bs = collage gameW gameH (
-                        greyBackground
-                        :: (map cannon [1..8])
-                        ++ (map bullet bs))
+displayBullets : [[BulletPos]] -> Element
+displayBullets bbs = collage gameW gameH (
+                         greyBackground
+                         :: (map cannon [1..8])
+                         ++ (concatMap bullets (zip [1..8] bbs)))
 
-bullet : BulletPos -> Form
-bullet pos = move (0, halfGameH - pos)
-                  (rect bulletW bulletH |> filled bulletColor)
+bullets : (CannonNum, [BulletPos]) -> [Form]
+bullets (n, bs) = map (bullet n) bs
+
+bullet : CannonNum -> BulletPos -> Form
+bullet n pos = move (cannonXOffset n, halfGameH - pos)
+                    (rect bulletW bulletH |> filled bulletColor)
 
 type BulletPos = Float
+type KeyDown = Bool
 
-step keys = maybeAddBullet keys >> bulletsMove
+step keys =  bulletsMove2 >> maybeAddBullet2 keys
 
 bulletSpeed = 5
 
-maybeAddBullet : Bool -> [BulletPos] -> [BulletPos]
-maybeAddBullet p bs = if p then (0 :: bs) else bs
+maybeAddBullet2 : [KeyDown] -> [[BulletPos]] -> [[BulletPos]]
+maybeAddBullet2 ps bbs = map maybeAddBullet (zip ps bbs)
+
+maybeAddBullet : (KeyDown, [BulletPos]) -> [BulletPos]
+maybeAddBullet (p,bs) = if p then (cannonH :: bs) else bs
+
+bulletsMove2 : [[BulletPos]] -> [[BulletPos]]
+bulletsMove2 = map bulletsMove
 
 bulletsMove : [BulletPos] -> [BulletPos]
 bulletsMove xs = case xs of

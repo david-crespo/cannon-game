@@ -4,20 +4,7 @@ import Keyboard (KeyCode, space)
 type CannonNum = Int
 
 -- MARIO
-input = let delta = lift (\t -> t/20) (fps 30)
-        in sampleOn delta space
-
---main : Signal Element
---main = lift asText input
-
---main : Signal Element
---main = coloredBackground <~ colorSignal
-
-coloredBackground   : Color -> Element
-coloredBackground c = collage gameW gameH ([background c])
-
-colorSignal : Signal Color
-colorSignal = (\x -> if x then blue else backgroundColor) <~ space
+input = sampleOn (fps 30) space
 
 -- map homerow keys to [0..7]
 homerow : Dict KeyCode CannonNum
@@ -37,10 +24,10 @@ main : Signal Element
 main = lift displayBullets (foldp step [0, 100, 200] input)
 
 displayBullets : [BulletPos] -> Element
-displayBullets bPositions = collage gameW gameH (
-                                [greyBackground]
-                                --++ (map cannon [1..8])
-                                ++ (map bullet bPositions))
+displayBullets bs = collage gameW gameH (
+                        greyBackground
+                        :: (map cannon [1..8])
+                        ++ (map bullet bs))
 
 bullet : BulletPos -> Form
 bullet pos = move (0, halfGameH - pos)
@@ -84,7 +71,3 @@ cannonXOffset n = toFloat (n * cannonSpacing - halfGameW)
 cannon : CannonNum -> Form
 cannon n = move (cannonXOffset n, halfGameH - halfCannonH)
                 (rect cannonW cannonH |> filled cannonColor)
-
---main : Element
---main =
---    collage gameW gameH (greyBackground :: (map cannon [1..8]))

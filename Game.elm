@@ -33,13 +33,15 @@ display keyCodes =
         ]
 
 main : Signal Element
-main = displayBullets <~ foldp bulletsStep [0] bulletDelta
+main = lift displayBullets (foldp bulletsStep [0, 100, 200] bulletDelta)
+
+--main = displayBullets [100,200,300]
 
 displayBullets : [BulletPos] -> Element
 displayBullets bPositions = collage gameW gameH (
                                 [greyBackground]
-                                ++ (map bullet bPositions)
-                                ++ (map cannon [1..8]))
+                                --++ (map cannon [1..8])
+                                ++ (map bullet bPositions))
 
 bullet : BulletPos -> Form
 bullet pos = move (0, halfGameH - pos) (rect bulletW bulletH |> filled bulletColor)
@@ -58,11 +60,11 @@ addBullet = (::) 0
 bulletSpeed = 5
 
 bulletsStep : Time -> [BulletPos] -> [BulletPos]
-bulletsStep _ xs = case xs of
+bulletsStep t xs = case xs of
                      [] -> []
                      (b::bs) -> if b < gameH
-                                then (b + bulletSpeed) :: bs
-                                else bs
+                                then (b + bulletSpeed) :: bulletsStep t bs
+                                else bulletsStep t bs
 
 -- Display
 

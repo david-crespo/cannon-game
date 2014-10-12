@@ -1,27 +1,38 @@
 import Dict (Dict, get, fromList)
-import Keyboard as K
+import Keyboard (KeyCode, keysDown, arrows, space)
 
 type CannonNum = Int
 
+delta = inSeconds <~ fps 30
+--input = sampleOn delta <| lift2 (,) (floatify <~ arrows) delta
+
 --main : Signal Element
---main = lift display K.lastPressed
+--main = sampleOn delta <| lift display keysDown
+
+main : Signal Element
+main = coloredBackground <~ colorSignal
+
+coloredBackground   : Color -> Element
+coloredBackground c = collage gameW gameH ([background c])
+
+colorSignal : Signal Color
+colorSignal = (\x -> if x then blue else red) <~ space
 
 -- map homerow keys to [0..7]
-homerow : Dict K.KeyCode CannonNum
+homerow : Dict KeyCode CannonNum
 homerow = fromList (zip [65, 83, 68, 70, 74, 75, 76, 186] [1..8])
 
-getCannonNum : K.KeyCode -> Maybe CannonNum
+getCannonNum : KeyCode -> Maybe CannonNum
 getCannonNum keyCode = get keyCode homerow
 
+input2 = let delta = lift (\t -> t/20) (fps 25)
+        in  sampleOn delta (lift2 (,) delta arrows)
 
-input = let delta = lift (\t -> t/20) (fps 25)
-        in  sampleOn delta (lift2 (,) delta K.arrows)
-
-display : Int -> Element
-display keyCode =
+display : [Int] -> Element
+display keyCodes =
     flow right
         [ plainText "The last key you pressed was: "
-        , asText (getCannonNum keyCode)
+        , asText (map getCannonNum keyCodes)
         ]
 
 -- Display
@@ -35,14 +46,16 @@ cannonSpacing = 70
 (cannonW, cannonH) = (6, 20)
 (halfCannonW, halfCannonH) = (3, 10)
 
-background = rect gameW gameH |> filled backgroundColor
+greyBackground = rect gameW gameH |> filled backgroundColor
+background c = rect gameW gameH |> filled c
 
 cannonXOffset : CannonNum -> Float
 cannonXOffset n = toFloat (n * cannonSpacing - halfGameW)
 
 cannon : CannonNum -> Form
-cannon n = move (cannonXOffset n, halfGameH - halfCannonH) (rect cannonW cannonH |> filled cannonColor)
+cannon n = move (cannonXOffset n, halfGameH - halfCannonH)
+                (rect cannonW cannonH |> filled cannonColor)
 
-main : Element
-main =
-    collage gameW gameH (background :: (map cannon [1..8]))
+--main : Element
+--main =
+--    collage gameW gameH (greyBackground :: (map cannon [1..8]))

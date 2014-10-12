@@ -5,7 +5,7 @@ type CannonNum = Int
 
 -- MARIO
 input = let delta = lift (\t -> t/20) (fps 30)
-        in sampleOn delta (lift2 (,) space delta)
+        in sampleOn delta space
 
 --main : Signal Element
 --main = lift asText input
@@ -34,7 +34,7 @@ display keyCodes =
         ]
 
 main : Signal Element
-main = lift displayBullets (foldp bulletsStep [0, 100, 200] input)
+main = lift displayBullets (foldp step [0, 100, 200] input)
 
 displayBullets : [BulletPos] -> Element
 displayBullets bPositions = collage gameW gameH (
@@ -42,29 +42,25 @@ displayBullets bPositions = collage gameW gameH (
                                 --++ (map cannon [1..8])
                                 ++ (map bullet bPositions))
 
-maybeAddBullet : Bool -> [BulletPos] -> [BulletPos]
-maybeAddBullet p bs = if p then addBullet bs else bs
-
 bullet : BulletPos -> Form
-bullet pos = move (0, halfGameH - pos) (rect bulletW bulletH |> filled bulletColor)
+bullet pos = move (0, halfGameH - pos)
+                  (rect bulletW bulletH |> filled bulletColor)
 
 type BulletPos = Float
 
-bulletsState : [BulletPos]
-bulletsState = []
-
-addBullet : [BulletPos] -> [BulletPos]
-addBullet = (::) 0
+step keys = maybeAddBullet keys >> bulletsMove
 
 bulletSpeed = 5
 
-bulletsStep : (Bool, Time) -> [BulletPos] -> [BulletPos]
-bulletsStep (p, t) xs = case xs of
-                      [] -> if p then [0] else []
-                      (b::bs) -> let newBs = maybeAddBullet p bs in
-                                if b < gameH
-                                then (b + bulletSpeed) :: bulletsStep (False, t) newBs
-                                else bulletsStep (False, t) newBs
+maybeAddBullet : Bool -> [BulletPos] -> [BulletPos]
+maybeAddBullet p bs = if p then (0 :: bs) else bs
+
+bulletsMove : [BulletPos] -> [BulletPos]
+bulletsMove xs = case xs of
+                  [] -> []
+                  (b::bs) -> if b < gameH
+                             then (b + bulletSpeed) :: bulletsMove bs
+                             else bulletsMove bs
 
 -- Display
 

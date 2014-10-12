@@ -2,29 +2,20 @@ import Dict (Dict, get, fromList)
 import Keyboard (KeyCode, space, isDown)
 
 type CannonNum = Int
+type BulletPos = Float
+type KeyDown = Bool
 
--- MARIO
-input = sampleOn (fps 30) (combine (map isDown homerowCodes))
-
+-- asdf jkl;
 homerowCodes = [65, 83, 68, 70, 74, 75, 76, 186]
 
-homerow : Dict KeyCode CannonNum
-homerow = fromList (zip homerowCodes [1..8])
+input : Signal [KeyDown]
+input = sampleOn (fps 30) (combine (map isDown homerowCodes))
 
-getCannonNum : KeyCode -> Maybe CannonNum
-getCannonNum keyCode = get keyCode homerow
+bulletState = repeat 8 []
 
-display : [Bool] -> Element
-display keyCodes =
-    flow right
-        [ plainText "The last key you pressed was: "
-        , asText keyCodes
-        ]
+--main = lift asText (foldp step bulletState input)
 
---main = lift display input
-
-main : Signal Element
-main = lift displayBullets (foldp step [[]] input)
+main = lift displayBullets (foldp step bulletState input)
 
 displayBullets : [[BulletPos]] -> Element
 displayBullets bbs = collage gameW gameH (
@@ -39,10 +30,8 @@ bullet : CannonNum -> BulletPos -> Form
 bullet n pos = move (cannonXOffset n, halfGameH - pos)
                     (rect bulletW bulletH |> filled bulletColor)
 
-type BulletPos = Float
-type KeyDown = Bool
 
-step keys =  bulletsMove2 >> maybeAddBullet2 keys
+step keys = bulletsMove2 >> maybeAddBullet2 keys
 
 bulletSpeed = 5
 

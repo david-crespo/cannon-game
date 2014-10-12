@@ -2,6 +2,7 @@ import Dict (Dict, get, fromList)
 import Keyboard (KeyCode, space, isDown)
 
 type CannonNum = Float
+type RowNum = Float
 type KeyDown = Bool
 data Dir = Left | Right
 
@@ -9,11 +10,18 @@ type BulletColState = [Float]
 type BulletsState = [BulletColState]
 
 type PlatformState = { dir:Dir, pos:Float, len:Float }
+type PlatformRowState = [PlatformState]
+type PlatformsState = [PlatformRowState]
 
-type GameState = { ps:[PlatformState], bbs:BulletsState }
+type GameState = { ps  : PlatformsState
+                 , bbs : BulletsState
+                 }
 
 numCannons = 8
 cannonSpacing = 70
+
+numPlatformRows = 3
+platformSpacing = 100
 
 
 -- INPUT
@@ -25,7 +33,7 @@ input = sampleOn (fps 30) (combine (map isDown homerow))
 
 --main = lift asText (foldp step bulletState input)
 main = let initBulletsState = repeat numCannons []
-           initPlatformsState = [{ dir=Left, pos=0, len=100 }]
+           initPlatformsState = repeat numPlatformRows [{ dir=Left, pos=0, len=100 }]
            initState = { ps = initPlatformsState, bbs = initBulletsState }
        in lift displayBullets (foldp step initState input)
 
@@ -54,9 +62,9 @@ bulletsMove xs = case xs of
                              else bulletsMove bs
 
 platformsMove2 : GameState -> GameState
-platformsMove2 gs = { gs | ps <- platformsMove gs.ps }
+platformsMove2 gs = { gs | ps <- map platformsMove gs.ps }
 
-platformsMove : [PlatformState] -> [PlatformState]
+platformsMove : PlatformRowState -> PlatformRowState
 platformsMove xs = case xs of
                      [] -> []
                      (p::ps) -> if p.pos < gameW
@@ -70,8 +78,9 @@ cannonColor = blue
 bulletColor = black
 platformColor = green
 
-(gameW,gameH) = ((numCannons + 1) * cannonSpacing, 400)
-(halfGameW,halfGameH) = (gameW/2,200)
+(gameW,gameH) = ((numCannons + 1) * cannonSpacing,
+                 (numPlatformRows + 1) * platformSpacing)
+(halfGameW,halfGameH) = (gameW/2,gameH/2)
 
 (bulletW, bulletH) = (2, 6)
 (cannonW, cannonH) = (6, 14)
@@ -83,6 +92,9 @@ greyBackground = rect gameW gameH |> filled myGrey
 cannonXOffset : CannonNum -> Float
 cannonXOffset n = n * cannonSpacing - halfGameW
 
+platformYOffset : RowNum -> Float
+platformYOffset n = n * platformSpacing - halfGameH
+
 
 -- DISPLAY
 
@@ -91,7 +103,7 @@ displayBullets { ps, bbs } = collage gameW gameH (
                            greyBackground
                            :: (map cannon [1..numCannons])
                            ++ (concatMap bullets (zip [1..numCannons] bbs))
-                           ++ (map platform ps))
+                           ++ (concatMap platforms (zip [1..numPlatformRows] ps)))
 
 bullets : (CannonNum, BulletColState) -> [Form]
 bullets (n, bs) = map (bullet n) bs
@@ -104,10 +116,13 @@ cannon : CannonNum -> Form
 cannon n = move (cannonXOffset n, halfGameH - halfCannonH)
                 (rect cannonW cannonH |> filled cannonColor)
 
-platform : PlatformState -> Form
-platform {dir,pos,len} = let dm = multiplier dir in
-                         move (dm * pos, 0)
-                         (rect len platformH |> filled platformColor)
+platforms : (RowNum, PlatformRowState) -> [Form]
+platforms (n, ps) = map (platform n) ps
+
+platform : RowNum -> PlatformState -> Form
+platform n {dir,pos,len} = let dm = multiplier dir in
+                           move (dm * pos, platformYOffset n)
+                           (rect len platformH |> filled platformColor)
 
 multiplier : Dir -> Float
 multiplier d = case d of

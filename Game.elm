@@ -27,7 +27,7 @@ platformSpacing = 100
 newPlatform = { dir=Left, pos=-halfGameW, len=100 }
 
 
--- INPUT
+-- MAIN
 
 homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 
@@ -36,11 +36,11 @@ input = let spaceList = combine (repeat numPlatformRows space)
             keysList = combine (map isDown homerow) in
         sampleOn (fps 30) (lift2 (,) spaceList keysList)
 
---main = lift asText (foldp step bulletState input)
 main = let initBulletsState = repeat numCannons []
            initPlatformsState = repeat numPlatformRows [newPlatform]
            initState = { ps = initPlatformsState, bbs = initBulletsState }
-       in lift displayBullets (foldp step initState input)
+       in lift display (foldp step initState input)
+
 
 -- STEP
 
@@ -111,22 +111,15 @@ greyBackground = rect gameW gameH |> filled myGrey
 instructions = move (0, -halfGameH + 10)
                     (toForm (plainText "Use SDFG HJKL to fire the cannons"))
 
-cannonXOffset : CannonNum -> Float
-cannonXOffset n = n * cannonSpacing - halfGameW
-
-platformYOffset : RowNum -> Float
-platformYOffset n = n * platformSpacing - halfGameH
-
-
 -- DISPLAY
 
-displayBullets : GameState -> Element
-displayBullets { ps, bbs } = collage gameW (gameH) (
-                           greyBackground
-                           :: instructions
-                           :: (map cannon [1..numCannons])
-                           ++ (concatMap bullets (zip [1..numCannons] bbs))
-                           ++ (concatMap platforms (zip [1..numPlatformRows] ps)))
+display : GameState -> Element
+display { ps, bbs } = collage gameW gameH (
+                        greyBackground
+                        :: instructions
+                        :: (map cannon [1..numCannons])
+                        ++ (concatMap bullets (zip [1..numCannons] bbs))
+                        ++ (concatMap platforms (zip [1..numPlatformRows] ps)))
 
 bullets : (CannonNum, BulletColState) -> [Form]
 bullets (n, bs) = map (bullet n) bs
@@ -135,9 +128,17 @@ bullet : CannonNum -> Float -> Form
 bullet n pos = move (cannonXOffset n, halfGameH - pos)
                     (rect bulletW bulletH |> filled bulletColor)
 
+-- CANNON
+
 cannon : CannonNum -> Form
 cannon n = move (cannonXOffset n, halfGameH - halfCannonH)
                 (rect cannonW cannonH |> filled cannonColor)
+
+cannonXOffset : CannonNum -> Float
+cannonXOffset n = n * cannonSpacing - halfGameW
+
+
+-- PLATFORM
 
 platforms : (RowNum, PlatformRowState) -> [Form]
 platforms (n, ps) = map (platform n) ps
@@ -146,6 +147,9 @@ platform : RowNum -> PlatformState -> Form
 platform n {dir,pos,len} = let dm = multiplier dir in
                            move (dm * pos, platformYOffset n)
                            (rect len platformH |> filled platformColor)
+
+platformYOffset : RowNum -> Float
+platformYOffset n = n * platformSpacing - halfGameH
 
 multiplier : Dir -> Float
 multiplier d = case d of

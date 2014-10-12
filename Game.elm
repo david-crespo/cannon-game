@@ -9,14 +9,14 @@ delta = inSeconds <~ fps 30
 --main : Signal Element
 --main = sampleOn delta <| lift display keysDown
 
-main : Signal Element
-main = coloredBackground <~ colorSignal
+--main : Signal Element
+--main = coloredBackground <~ colorSignal
 
 coloredBackground   : Color -> Element
 coloredBackground c = collage gameW gameH ([background c])
 
 colorSignal : Signal Color
-colorSignal = (\x -> if x then blue else red) <~ space
+colorSignal = (\x -> if x then blue else backgroundColor) <~ space
 
 -- map homerow keys to [0..7]
 homerow : Dict KeyCode CannonNum
@@ -35,14 +35,36 @@ display keyCodes =
         , asText (map getCannonNum keyCodes)
         ]
 
+main : Element
+main = displayBullets [100, 200, 300]
+
+displayBullets : [BulletPos] -> Element
+displayBullets bPositions = collage gameW gameH (greyBackground :: (map bullet bPositions))
+
+bullet : BulletPos -> Form
+bullet pos = move (0, toFloat (pos - halfGameH)) (rect bulletW bulletH |> filled bulletColor)
+
+type BulletPos = Int
+
+bulletsState : [BulletPos]
+bulletsState = []
+
+addBullet : [BulletPos] -> [BulletPos]
+addBullet = (::) 0
+
+bulletsStep : [BulletPos] -> [BulletPos]
+bulletsStep (b::bs) = if b < gameH then ((b+1) :: bs) else bs
+
 -- Display
 
 c = 240
 backgroundColor = rgba c c c 1
 cannonColor = blue
+bulletColor = black
 cannonSpacing = 70
 (gameW,gameH) = (630,400)
 (halfGameW,halfGameH) = (315,200)
+(bulletW, bulletH) = (2, 6)
 (cannonW, cannonH) = (6, 20)
 (halfCannonW, halfCannonH) = (3, 10)
 

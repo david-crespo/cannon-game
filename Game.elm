@@ -10,7 +10,7 @@ type BulletsState = [BulletColState]
 
 type PlatformState = { dir:Dir, pos:Float, len:Float }
 
-type GameState = ([PlatformState], BulletsState)
+type GameState = { ps:[PlatformState], bbs:BulletsState }
 
 numCannons = 8
 cannonSpacing = 70
@@ -26,7 +26,7 @@ input = sampleOn (fps 30) (combine (map isDown homerow))
 --main = lift asText (foldp step bulletState input)
 main = let initBulletsState = repeat numCannons []
            initPlatformsState = [{ dir=Left, pos=0, len=100 }]
-           initState = (initPlatformsState, initBulletsState)
+           initState = { ps = initPlatformsState, bbs = initBulletsState }
        in lift displayBullets (foldp step initState input)
 
 -- STEP
@@ -38,13 +38,13 @@ bulletSpeed = 5
 platformSpeed = 5
 
 maybeAddBullet2 : [KeyDown] -> GameState -> GameState
-maybeAddBullet2 keys (ps, bbs) = (ps, map maybeAddBullet (zip keys bbs))
+maybeAddBullet2 keys gs = { gs | bbs <- map maybeAddBullet (zip keys gs.bbs)}
 
 maybeAddBullet : (KeyDown, BulletColState) -> BulletColState
 maybeAddBullet (p,bs) = if p then (cannonH :: bs) else bs
 
 bulletsMove2 : GameState -> GameState
-bulletsMove2 (ps, bbs) = (ps, map bulletsMove bbs)
+bulletsMove2 gs = { gs | bbs <- map bulletsMove gs.bbs }
 
 bulletsMove : BulletColState -> BulletColState
 bulletsMove xs = case xs of
@@ -54,7 +54,7 @@ bulletsMove xs = case xs of
                              else bulletsMove bs
 
 platformsMove2 : GameState -> GameState
-platformsMove2 (ps, bbs) = (platformsMove ps, bbs)
+platformsMove2 gs = { gs | ps <- platformsMove gs.ps }
 
 platformsMove : [PlatformState] -> [PlatformState]
 platformsMove xs = case xs of
@@ -87,7 +87,7 @@ cannonXOffset n = n * cannonSpacing - halfGameW
 -- DISPLAY
 
 displayBullets : GameState -> Element
-displayBullets (ps,bbs) = collage gameW gameH (
+displayBullets { ps, bbs } = collage gameW gameH (
                            greyBackground
                            :: (map cannon [1..numCannons])
                            ++ (concatMap bullets (zip [1..numCannons] bbs))

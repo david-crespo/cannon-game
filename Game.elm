@@ -25,9 +25,6 @@ homerow = fromList (zip [65, 83, 68, 70, 74, 75, 76, 186] [1..8])
 getCannonNum : KeyCode -> Maybe CannonNum
 getCannonNum keyCode = get keyCode homerow
 
-input2 = let delta = lift (\t -> t/20) (fps 25)
-        in  sampleOn delta (lift2 (,) delta arrows)
-
 display : [Int] -> Element
 display keyCodes =
     flow right
@@ -35,16 +32,19 @@ display keyCodes =
         , asText (map getCannonNum keyCodes)
         ]
 
-main : Element
-main = displayBullets [100, 200, 300]
+main : Signal Element
+main = displayBullets <~ foldp bulletsStep [100, 200, 300] bulletDelta
 
 displayBullets : [BulletPos] -> Element
 displayBullets bPositions = collage gameW gameH (greyBackground :: (map bullet bPositions))
 
 bullet : BulletPos -> Form
-bullet pos = move (0, toFloat (pos - halfGameH)) (rect bulletW bulletH |> filled bulletColor)
+bullet pos = move (0, halfGameH - pos) (rect bulletW bulletH |> filled bulletColor)
 
-type BulletPos = Int
+type BulletPos = Float
+
+bulletDelta : Signal Time
+bulletDelta = lift (\t -> t / 20) (fps 30)
 
 bulletsState : [BulletPos]
 bulletsState = []
@@ -52,8 +52,8 @@ bulletsState = []
 addBullet : [BulletPos] -> [BulletPos]
 addBullet = (::) 0
 
-bulletsStep : [BulletPos] -> [BulletPos]
-bulletsStep (b::bs) = if b < gameH then ((b+1) :: bs) else bs
+bulletsStep : Time -> [BulletPos] -> [BulletPos]
+bulletsStep _ bs = map (\x -> x + 1) bs
 
 -- Display
 

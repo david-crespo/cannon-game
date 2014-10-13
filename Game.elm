@@ -26,26 +26,24 @@ cannonSpacing = 70
 numPlatformRows = 3
 platformSpacing = 100
 
-newPlatform = { dir=Left, pos=-halfGameW-50, len=100 }
-
-
 -- MAIN
 
 homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 
-randToBool = (>) 3
+pickFrac = (>) 2
 
-platformSignal = lift randToBool <| range 1 10 <| every ( 300 * millisecond)
+every400 = (1, 10, every (400 * millisecond))
+platformSignal (a,b,c) = lift pickFrac (range a b c)
 
 input : Signal ([KeyDown], [KeyDown])
-input = let spaceList = combine (repeat numPlatformRows platformSignal)
+input = let spaceList = combine (map platformSignal (repeat numPlatformRows every400))
             keysList = combine (map isDown homerow) in
         sampleOn (fps 30) (lift2 (,) spaceList keysList)
 
 --main = lift asText rand
 
 main = let initBulletsState = repeat numCannons []
-           initPlatformsState = repeat numPlatformRows [newPlatform]
+           initPlatformsState = repeat numPlatformRows []
            initState = { ps = initPlatformsState, bbs = initBulletsState }
        in lift display (foldp step initState input)
 
@@ -84,6 +82,8 @@ platformSpeed = 5
 
 maybeAddPlatforms : [CreatePlatform] -> GameState -> GameState
 maybeAddPlatforms createPs gs = { gs | ps <- map maybeAddPlatform (zip createPs gs.ps) }
+
+newPlatform = { dir=Left, pos=-halfGameW-50, len=100 }
 
 maybeAddPlatform : (CreatePlatform, PlatformRowState) -> PlatformRowState
 maybeAddPlatform (createP, ps) = if createP then newPlatform::ps else ps
@@ -133,7 +133,7 @@ bullets : (CannonNum, BulletColState) -> [Form]
 bullets (n, bs) = map (bullet n) bs
 
 bullet : CannonNum -> BulletState -> Form
-bullet n {pos} = move (cannonXOffset n, halfGameH - pos)
+bullet n b = move (cannonXOffset n, halfGameH - b.pos)
                     (rect bulletW bulletH |> filled bulletColor)
 
 -- CANNON

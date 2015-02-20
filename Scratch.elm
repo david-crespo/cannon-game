@@ -2,24 +2,17 @@ import Graphics.Element (..)
 import Text (..)
 import Random (int, generate, initialSeed, Seed)
 import Time (Time, every, second, fps, timestamp)
-import Signal
+import Signal (Signal, (<~), foldp)
 
-type alias GameState = { seed : Seed }
-type alias CountState = Int
+type alias GameState = { n : Int
+                       , seed : Seed }
 
--- getTime : Time
--- getTime = fst <| timestamp <| constant 5
+randInt : Time -> GameState -> GameState
+randInt _ gs = let (n', seed') = generate (int 1 10) gs.seed
+               in { gs | seed <- seed'
+                       , n <- n' }
 
-randInt : Int -> Int -> GameState -> (Int, GameState)
-randInt a b gs = let (i, seed') = generate (int a b) gs.seed
-                 in (i, {gs | seed <- seed' } )
-
-inc : Time -> Int -> Int
-inc _ = (+) 1
-
-
--- main : Signal Element
--- main = Signal.map asText (Signal.foldp inc 1 (every second))
+initState = { n=1 , seed = initialSeed 0 }
 
 main : Signal Element
-main = Signal.map asText (every second)
+main = asText <~ (.n <~ foldp randInt initState (every second))

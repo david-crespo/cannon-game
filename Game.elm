@@ -25,7 +25,6 @@ type alias PlatformsState = List PlatformRowState
 
 type alias GameState = { ps   : PlatformsState
                        , bbs  : BulletsState
-                       , seed : Seed
                        }
 
 numCannons = 8
@@ -41,39 +40,38 @@ zip = map2 (,)
 
 homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 
-pickFrac =
+-- pickFrac =
 
-randInt a b = generate (int a b) (initialSeed 5)
+-- randInt a b = generate (int a b) (initialSeed 5)
 
 every400 = every (400 * millisecond)
 
-pickFrac ofTen = let (i, seed) = (randInt 1 10) in i > ofTen
-platformSignal heartbeat =
+-- pickFrac ofTen = let (i, seed) = (randInt 1 10) in i > ofTen
+-- platformSignal heartbeat =
 
 {-| Combine a list of signals into a signal of lists. -}
 combine : List (Signal a) -> Signal (List a)
 combine = foldr (S.map2 (::)) (S.constant [])
 
-input : Signal (List KeyDown, List KeyDown)
-input = let spaceList = combine (map platformSignal (repeat numPlatformRows every400))
-            keysList = combine (map isDown homerow)
-        in S.sampleOn (fps 30) (sZip spaceList keysList)
+input : Signal (List KeyDown)
+input = let keysList = combine (map isDown homerow)
+        in S.sampleOn (fps 30) keysList
 
 --main = map asText rand
 
 main = let initBulletsState = repeat numCannons []
            initPlatformsState = repeat numPlatformRows []
            initState = { ps = initPlatformsState, bbs = initBulletsState }
-       in map display (S.foldp step initState input)
+       in S.map display (S.foldp step initState input)
 
 
 -- STEP
 
-step : (List CreatePlatform, List KeyDown) -> GameState -> GameState
-step (createPs, keys) = bulletsMove2
-                        >> maybeAddBullets keys
-                        >> platformsMove2
-                        >> maybeAddPlatforms createPs
+step : List KeyDown -> GameState -> GameState
+step keys = bulletsMove2
+            >> maybeAddBullets keys
+            -- >> platformsMove2
+            -- >> maybeAddPlatforms createPs
 
 -- BULLETS
 

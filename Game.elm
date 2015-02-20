@@ -1,30 +1,40 @@
+import Array (repeat)
+import Color (..)
 import Dict (Dict, get, fromList)
+import Graphics.Collage (..)
+import Graphics.Element (..)
 import Keyboard (KeyCode, space, isDown)
-import Random (range)
+import List ((::), concatMap)
+import Random (int)
+import Signal (..)
+import Text (plainText)
+import Time (every, millisecond, fps)
 
-type CannonNum = Float
-type RowNum = Float
-type KeyDown = Bool
-type CreatePlatform = Bool
-data Dir = Left | Right
+type alias CannonNum = Float
+type alias RowNum = Float
+type alias KeyDown = Bool
+type alias CreatePlatform = Bool
+type       Dir = Left | Right
 
-type BulletState = { pos: Float }
-type BulletColState = [BulletState]
-type BulletsState = [BulletColState]
+type alias BulletState = { pos: Float }
+type alias BulletColState = List BulletState
+type alias BulletsState = List BulletColState
 
-type PlatformState = { dir:Dir, pos:Float, len:Float }
-type PlatformRowState = [PlatformState]
-type PlatformsState = [PlatformRowState]
+type alias PlatformState = { dir:Dir, pos:Float, len:Float }
+type alias PlatformRowState = List PlatformState
+type alias PlatformsState = List PlatformRowState
 
-type GameState = { ps  : PlatformsState
-                 , bbs : BulletsState
-                 }
+type alias GameState = { ps  : PlatformsState
+                       , bbs : BulletsState
+                       }
 
 numCannons = 8
 cannonSpacing = 70
 
 numPlatformRows = 3
 platformSpacing = 100
+
+zip = map2 (,)
 
 -- MAIN
 
@@ -33,24 +43,24 @@ homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 pickFrac = (>) 2
 
 every400 = (1, 10, every (400 * millisecond))
-platformSignal (a,b,c) = lift pickFrac (range a b c)
+platformSignal (a,b,c) = map pickFrac (int a b) -- c)
 
-input : Signal ([KeyDown], [KeyDown])
-input = let spaceList = combine (map platformSignal (repeat numPlatformRows every400))
-            keysList = combine (map isDown homerow) in
-        sampleOn (fps 30) (lift2 (,) spaceList keysList)
+input : Signal (List KeyDown, List KeyDown)
+input = let spaceList = merge (map platformSignal (repeat numPlatformRows every400))
+            keysList = merge (map isDown homerow) in
+        sampleOn (fps 30) (map2 (,) spaceList keysList)
 
---main = lift asText rand
+--main = map asText rand
 
 main = let initBulletsState = repeat numCannons []
            initPlatformsState = repeat numPlatformRows []
            initState = { ps = initPlatformsState, bbs = initBulletsState }
-       in lift display (foldp step initState input)
+       in map display (foldp step initState input)
 
 
 -- STEP
 
-step : ([CreatePlatform], [KeyDown]) -> GameState -> GameState
+step : (List CreatePlatform, List KeyDown) -> GameState -> GameState
 step (createPs, keys) = bulletsMove2
                         >> maybeAddBullets keys
                         >> platformsMove2
@@ -60,7 +70,7 @@ step (createPs, keys) = bulletsMove2
 
 bulletSpeed = 5
 
-maybeAddBullets : [KeyDown] -> GameState -> GameState
+maybeAddBullets : List KeyDown -> GameState -> GameState
 maybeAddBullets keys gs = { gs | bbs <- map maybeAddBullet (zip keys gs.bbs) }
 
 maybeAddBullet : (KeyDown, BulletColState) -> BulletColState
@@ -80,7 +90,7 @@ bulletsMove xs = case xs of
 
 platformSpeed = 5
 
-maybeAddPlatforms : [CreatePlatform] -> GameState -> GameState
+maybeAddPlatforms : List CreatePlatform -> GameState -> GameState
 maybeAddPlatforms createPs gs = { gs | ps <- map maybeAddPlatform (zip createPs gs.ps) }
 
 newPlatform = { dir=Left, pos=-halfGameW-50, len=100 }
@@ -129,7 +139,7 @@ display { ps, bbs } = collage gameW gameH (
                         ++ (concatMap bullets (zip [1..numCannons] bbs))
                         ++ (concatMap platforms (zip [1..numPlatformRows] ps)))
 
-bullets : (CannonNum, BulletColState) -> [Form]
+bullets : (CannonNum, BulletColState) -> List Form
 bullets (n, bs) = map (bullet n) bs
 
 bullet : CannonNum -> BulletState -> Form
@@ -148,7 +158,7 @@ cannonXOffset n = n * cannonSpacing - halfGameW
 
 -- PLATFORM
 
-platforms : (RowNum, PlatformRowState) -> [Form]
+platforms : (RowNum, PlatformRowState) -> List Form
 platforms (n, ps) = map (platform n) ps
 
 platform : RowNum -> PlatformState -> Form

@@ -1,12 +1,11 @@
-import Array (repeat)
 import Color (..)
 import Dict (Dict, get, fromList)
 import Graphics.Collage (..)
 import Graphics.Element (..)
 import Keyboard (KeyCode, space, isDown)
-import List ((::), concatMap)
+import List ((::), concatMap, foldr, map, map2, repeat)
 import Random (int)
-import Signal (..)
+import Signal as S
 import Text (plainText)
 import Time (every, millisecond, fps)
 
@@ -34,6 +33,7 @@ cannonSpacing = 70
 numPlatformRows = 3
 platformSpacing = 100
 
+sZip = S.map2 (,)
 zip = map2 (,)
 
 -- MAIN
@@ -45,17 +45,21 @@ pickFrac = (>) 2
 every400 = (1, 10, every (400 * millisecond))
 platformSignal (a,b,c) = map pickFrac (int a b) -- c)
 
+{-| Combine a list of signals into a signal of lists. -}
+combine : List (Signal a) -> Signal (List a)
+combine = foldr (S.map2 (::)) (S.constant [])
+
 input : Signal (List KeyDown, List KeyDown)
-input = let spaceList = merge (map platformSignal (repeat numPlatformRows every400))
-            keysList = merge (map isDown homerow) in
-        sampleOn (fps 30) (map2 (,) spaceList keysList)
+input = let spaceList = combine (map platformSignal (repeat numPlatformRows every400))
+            keysList = combine (map isDown homerow)
+        in S.sampleOn (fps 30) (sZip spaceList keysList)
 
 --main = map asText rand
 
 main = let initBulletsState = repeat numCannons []
            initPlatformsState = repeat numPlatformRows []
            initState = { ps = initPlatformsState, bbs = initBulletsState }
-       in map display (foldp step initState input)
+       in map display (S.foldp step initState input)
 
 
 -- STEP

@@ -4,7 +4,7 @@ import Graphics.Collage (..)
 import Graphics.Element (..)
 import Keyboard (KeyCode, space, isDown)
 import List ((::), concatMap, foldr, map, map2, repeat)
-import Random (int)
+import Random (int, generate, initialSeed, Seed)
 import Signal as S
 import Text (plainText)
 import Time (every, millisecond, fps)
@@ -23,8 +23,9 @@ type alias PlatformState = { dir:Dir, pos:Float, len:Float }
 type alias PlatformRowState = List PlatformState
 type alias PlatformsState = List PlatformRowState
 
-type alias GameState = { ps  : PlatformsState
-                       , bbs : BulletsState
+type alias GameState = { ps   : PlatformsState
+                       , bbs  : BulletsState
+                       , seed : Seed
                        }
 
 numCannons = 8
@@ -40,10 +41,14 @@ zip = map2 (,)
 
 homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 
-pickFrac = (>) 2
+pickFrac =
 
-every400 = (1, 10, every (400 * millisecond))
-platformSignal (a,b,c) = map pickFrac (int a b) -- c)
+randInt a b = generate (int a b) (initialSeed 5)
+
+every400 = every (400 * millisecond)
+
+pickFrac ofTen = let (i, seed) = (randInt 1 10) in i > ofTen
+platformSignal heartbeat =
 
 {-| Combine a list of signals into a signal of lists. -}
 combine : List (Signal a) -> Signal (List a)

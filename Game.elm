@@ -1,13 +1,13 @@
-import Color (..)
-import Dict (Dict, get, fromList)
-import Graphics.Collage (..)
-import Graphics.Element (..)
-import Keyboard (KeyCode, space, isDown)
-import List ((::), concatMap, foldr, map, map2, repeat)
-import Random (int, generate, initialSeed, Seed)
+import Color exposing (..)
+import Dict exposing (Dict, get, fromList)
+import Graphics.Collage exposing (..)
+import Graphics.Element exposing (..)
+import Keyboard exposing (KeyCode, space, isDown)
+import List exposing ((::), concatMap, foldr, map, map2, repeat)
+import Random exposing (int, generate, initialSeed, Seed)
 import Signal as S
-import Text (plainText)
-import Time (every, millisecond, fps)
+import Text exposing (plainText)
+import Time exposing (every, millisecond, fps)
 
 type alias CannonNum = Float
 type alias RowNum = Float

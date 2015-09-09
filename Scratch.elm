@@ -14,7 +14,7 @@ currTime : Signal Time
 currTime = fst <~ (timestamp (constant ()))
 
 seed : Signal Time -> Signal Seed
-seed t = initialSeed <~ (truncate <~ t)
+seed t = initialSeed <~ (round <~ t)
 
 main : Signal Element
 main = asText <~ (.n <~ foldp (randInt 1 10) { n = 1 } (seed (every second)))

@@ -4,10 +4,10 @@ import Graphics.Collage exposing (..)
 import Graphics.Element exposing (..)
 import Keyboard exposing (KeyCode, space, isDown)
 import List exposing ((::), concatMap, foldr, map, map2, repeat)
-import Random exposing (int, generate, initialSeed, Seed)
+import Random as R
 import Signal as S
 import Text
-import Time exposing (every, millisecond, fps)
+import Time exposing (Time, every, millisecond, fps)
 
 type alias CannonNum = Float
 type alias RowNum = Float
@@ -22,6 +22,8 @@ type alias BulletsState = List BulletColState
 type alias PlatformState = { dir:Dir, pos:Float, len:Float }
 type alias PlatformRowState = List PlatformState
 type alias PlatformsState = List PlatformRowState
+
+type alias KeysAndPs = (List KeyDown, List CreatePlatform)
 
 type alias GameState = { ps   : PlatformsState
                        , bbs  : BulletsState
@@ -40,22 +42,30 @@ zip = map2 (,)
 
 homerow = [83, 68, 70, 71, 72, 74, 75, 76] -- sdfg hjkl
 
--- pickFrac =
+pickFrac = (>) 2
 
--- randInt a b = generate (int a b) (initialSeed 5)
+g : R.Generator Int
+g = R.int 1 10
 
 every400 = every (400 * millisecond)
 
--- pickFrac ofTen = let (i, seed) = (randInt 1 10) in i > ofTen
--- platformSignal heartbeat =
+folder : Time -> (Int, R.Seed) -> (Int, R.Seed)
+folder t (i, s) = R.generate g s
+
+initialSeeds = map R.initialSeed [453, 69043, 2383]
+
+randBools iSeed =
+    let signal = S.foldp folder (0, iSeed) every400
+    in S.map (\(i,s) -> (i < 2)) signal
 
 {-| Combine a list of signals into a signal of lists. -}
 combine : List (Signal a) -> Signal (List a)
 combine = foldr (S.map2 (::)) (S.constant [])
 
-input : Signal (List KeyDown)
-input = let keysList = combine (map isDown homerow)
-        in S.sampleOn (fps 30) keysList
+input : Signal KeysAndPs
+input = let keys = combine (map isDown homerow)
+            ps = combine (map randBools initialSeeds)
+        in S.sampleOn (fps 30) (S.map2 (,) keys ps)
 
 --main = map asText rand
 
@@ -67,11 +77,11 @@ main = let initBulletsState = repeat numCannons []
 
 -- STEP
 
-step : List KeyDown -> GameState -> GameState
-step keys = bulletsMove2
-            >> maybeAddBullets keys
-            -- >> platformsMove2
-            -- >> maybeAddPlatforms createPs
+step : KeysAndPs -> GameState -> GameState
+step (keys, createPs) = bulletsMove2
+                        >> maybeAddBullets keys
+                        >> platformsMove2
+                        >> maybeAddPlatforms createPs
 
 -- BULLETS
 

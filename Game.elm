@@ -6,7 +6,7 @@ import Keyboard exposing (KeyCode, space, isDown)
 import List exposing ((::), concatMap, foldr, map, map2, repeat)
 import Random exposing (int, generate, initialSeed, Seed)
 import Signal as S
-import Text exposing (plainText)
+import Text
 import Time exposing (every, millisecond, fps)
 
 type alias CannonNum = Float
@@ -134,7 +134,7 @@ platformH = 20
 greyBackground = rect gameW gameH |> filled myGrey
 
 instructions = move (0, -halfGameH + 10)
-                    (toForm (plainText "Use SDFG HJKL to fire the cannons"))
+                    (toForm (centered (Text.fromString "Use SDFG HJKL to fire the cannons")))
 
 -- DISPLAY
 
